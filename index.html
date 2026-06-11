@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salary Invoice Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+<style>
+  :root{
+    --ink:#1c2127; --muted:#6b7280; --line:#e2e4e8; --paper:#ffffff;
+    --bg:#eef0f3; --accent:#0f5132; --accent-soft:#e7f2ec; --danger:#b3261e;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --display:"Plus Jakarta Sans",var(--sans);
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  .app{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
+  header.top h1{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.01em}
+  header.top .sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+  .tabs button{background:none;border:none;padding:8px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.active{color:var(--ink);border-bottom-color:var(--accent)}
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:24px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px}
+  .card h2{font-family:var(--display);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:14px}
+  label{display:block;font-size:12px;font-weight:600;margin:12px 0 4px}
+  label:first-of-type{margin-top:0}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  textarea{resize:vertical;min-height:60px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:inline-block;padding:9px 16px;border-radius:6px;border:1px solid var(--line);background:#fff;font:inherit;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.danger{color:var(--danger)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .saved-flash{font-size:12px;color:var(--accent);font-weight:600;margin-left:6px}
+
+  /* invoice paper */
+  .invoice{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:40px 44px;min-height:600px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .inv-head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:2px solid var(--ink)}
+  .inv-head .logo{display:block}
+  .inv-head .title{font-family:var(--display);font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .inv-head .subtitle{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .inv-right{text-align:right}
+  .inv-meta{font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)}
+  .inv-meta strong{color:var(--ink)}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:20px 0;border-bottom:1px solid var(--line)}
+  .parties .eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .parties .name{font-weight:700}
+  .parties .detail{font-size:13px;color:var(--muted);white-space:pre-line}
+  table.items{width:100%;border-collapse:collapse;margin-top:8px}
+  table.items th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:12px 0 8px;border-bottom:1px solid var(--line)}
+  table.items th:last-child,table.items td:last-child{text-align:right}
+  table.items td{padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+  table.items td.amount{font-family:var(--mono)}
+  .total-row{display:flex;justify-content:flex-end;gap:40px;padding:16px 0;font-weight:700}
+  .total-row .amt{font-family:var(--mono);font-size:18px;background:var(--accent-soft);color:var(--accent);padding:4px 12px;border-radius:6px}
+  .pay-note{margin-top:20px;padding:14px;background:#f7f8f9;border-radius:8px;font-size:12px}
+  .pay-note .eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+  .pay-note .detail{font-family:var(--mono);white-space:pre-line}
+  .sig{margin-top:36px;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .sig .line{border-top:1px solid var(--ink);width:200px;padding-top:6px;color:var(--ink)}
+
+  /* history */
+  .hist-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:12px}
+  .hist-item:last-child{border-bottom:none}
+  .hist-item .no{font-family:var(--mono);font-weight:600}
+  .hist-item .period{color:var(--muted);font-size:13px}
+  .hist-item .amt{font-family:var(--mono)}
+  .empty{color:var(--muted);text-align:center;padding:32px 0}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+
+  @media print{
+    body{background:#fff}
+    .no-print{display:none !important}
+    .app{padding:0;max-width:none}
+    .grid{display:block}
+    .invoice{border:none;box-shadow:none;border-radius:0;padding:0}
+  }
+</style>
+</head>
+<body>
+<div class="app" x-data="invoiceApp()" x-init="init()">
+
+  <header class="top no-print">
+    <h1>Salary Invoice Generator</h1>
+    <span class="sub">internal · software team</span>
+  </header>
+
+  <div class="tabs no-print">
+    <button :class="{active: tab==='new'}" @click="tab='new'">New invoice</button>
+    <button :class="{active: tab==='settings'}" @click="tab='settings'">My details</button>
+    <button :class="{active: tab==='history'}" @click="tab='history'; loadHistory()">History</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card" x-show="tab==='settings'" x-cloak style="max-width:520px">
+    <h2>Personal details</h2>
+    <label>Full name</label><input x-model="profile.name" placeholder="Jane Doe">
+    <label>Role / title</label><input x-model="profile.role" placeholder="Senior Software Engineer">
+    <label>Email</label><input x-model="profile.email" placeholder="jane@example.com">
+    <label>Address (optional)</label><textarea x-model="profile.address"></textarea>
+    <label>Payment details (bank / account)</label>
+    <textarea x-model="profile.payment" placeholder="Bank: Example Bank&#10;Account: 0000-0000&#10;IBAN: ..."></textarea>
+    <div class="row2">
+      <div><label>Semi-monthly amount</label><input type="number" min="0" step="0.01" x-model.number="profile.amount"></div>
+      <div><label>Currency</label><input x-model="profile.currency" placeholder="USD"></div>
+    </div>
+
+    <h2 style="margin-top:24px">Company details</h2>
+    <label>Company name</label><input x-model="profile.companyName" placeholder="Acme Software Ltd.">
+    <label>Company address</label><textarea x-model="profile.companyAddress"></textarea>
+    <label>Attention to (optional)</label><input x-model="profile.companyAttn" placeholder="Finance / HR">
+
+    <div class="actions">
+      <button class="btn primary" @click="saveProfile()">Save details</button>
+      <span class="saved-flash" x-show="savedFlash" x-transition.opacity>Saved ✓</span>
+    </div>
+    <p class="hint">Stored locally in your browser (IndexedDB). Nothing is sent anywhere.</p>
+  </div>
+
+  <!-- NEW INVOICE -->
+  <div class="grid" x-show="tab==='new'" x-cloak>
+    <div class="card no-print">
+      <h2>Invoice setup</h2>
+      <label>Pay period</label>
+      <div class="row2">
+        <select x-model="form.half" @change="syncDescription()">
+          <option value="1">1st – 15th</option>
+          <option value="2">16th – end of month</option>
+        </select>
+        <input type="month" x-model="form.month" @change="syncDescription()">
+      </div>
+      <label>Invoice number</label>
+      <input x-model="form.number">
+      <label>Invoice date</label>
+      <input type="date" x-model="form.date">
+      <label>Description</label>
+      <input x-model="form.description">
+      <label>Amount</label>
+      <input type="number" min="0" step="0.01" x-model.number="form.amount">
+      <label>Note (optional)</label>
+      <input x-model="form.note" placeholder="e.g. includes on-call allowance">
+      <div class="actions">
+        <button class="btn primary" @click="saveAndPrint()">Save & print / PDF</button>
+        <button class="btn" @click="saveInvoice()">Save only</button>
+        <span class="saved-flash" x-show="invFlash" x-transition.opacity>Saved ✓</span>
+      </div>
+      <p class="hint" x-show="!profile.name">Tip: fill in “My details” first — they appear on the invoice automatically.</p>
+    </div>
+
+    <!-- PREVIEW / PRINT AREA -->
+    <div class="invoice">
+      <div class="inv-head">
+        <div>
+          <svg class="logo" width="119" height="56" viewBox="0 0 270 127" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_37_15)">
+<path d="M102.314 127V93.5013L60.496 110.251L102.314 127Z" fill="url(#paint0_linear_37_15)"/>
+<path opacity="0.75" d="M18.6858 0V33.5068L60.5041 16.7494L18.6858 0Z" fill="#1179EC"/>
+<path d="M60.504 16.7494L18.6858 33.5068L0 40.986V86.0141L18.6858 93.5013V92.3637L60.504 77.236L29.7174 66.102V60.9061L60.504 49.7641L102.314 34.6364V33.4988V0L60.504 16.7494Z" fill="url(#paint1_linear_37_15)"/>
+<path opacity="0.75" d="M102.314 33.4988V34.6364L60.504 49.7641L91.2825 60.9061V66.102L60.504 77.236L18.6858 92.3637V93.5013V127L60.4959 110.251L102.314 93.5013L121 86.0141V40.986L102.314 33.4988Z" fill="#1179EC"/>
+</g>
+<path d="M142.753 30.2783V25.9811H159.784V30.2783H153.95V48H148.587V30.2783H142.753ZM162.476 48V24.7892H167.84V32.8503C168.906 31.3447 170.82 30.3096 173.235 30.3096C177.218 30.3096 179.884 33.0698 179.884 37.7747V48H174.552V38.4961C174.552 36.1123 173.235 34.795 171.196 34.795C169.157 34.795 167.84 36.1123 167.84 38.4961V48H162.476ZM191.328 34.544C189.571 34.544 188.222 35.6105 187.909 37.5552H194.621C194.621 35.6418 193.115 34.544 191.328 34.544ZM199.702 42.1973C198.855 45.6162 195.75 48.2509 191.39 48.2509C186.246 48.2509 182.545 44.8007 182.545 39.2489C182.545 33.6971 186.184 30.2469 191.39 30.2469C196.503 30.2469 200.11 33.6344 200.11 38.9666C200.11 39.4685 200.079 40.0017 200.016 40.5349H187.877C188.065 42.8246 189.477 43.8911 191.202 43.8911C192.708 43.8911 193.555 43.1383 193.994 42.1973H199.702Z" fill="#040E1A"/>
+<path d="M149.308 67.2H152.225C154.358 67.2 155.268 66.1336 155.268 64.4398C155.268 62.7461 154.358 61.6796 152.225 61.6796H149.308V67.2ZM160.725 64.4398C160.725 68.0783 158.248 71.4658 152.633 71.4658H149.308V79.37H143.945V57.3511H152.633C158.028 57.3511 160.725 60.3936 160.725 64.4398ZM168.881 71.2462V79.37H163.518V61.8678H168.881V64.7849C170.105 62.9343 172.018 61.6796 174.37 61.6796V67.3569H172.896C170.356 67.3569 168.881 68.2351 168.881 71.2462ZM194.06 70.6189C194.06 76.1707 190.045 79.6209 184.901 79.6209C179.757 79.6209 175.868 76.1707 175.868 70.6189C175.868 65.0671 179.851 61.6169 184.964 61.6169C190.108 61.6169 194.06 65.0671 194.06 70.6189ZM181.325 70.6189C181.325 73.5673 182.956 74.9788 184.901 74.9788C186.814 74.9788 188.602 73.5673 188.602 70.6189C188.602 67.6391 186.846 66.259 184.964 66.259C183.019 66.259 181.325 67.6391 181.325 70.6189ZM195.839 70.5875C195.839 65.0671 199.258 61.6169 203.555 61.6169C205.876 61.6169 207.883 62.6833 208.95 64.283V56.1592H214.313V79.37H208.95V76.8607C207.977 78.4604 206.127 79.6209 203.555 79.6209C199.258 79.6209 195.839 76.1079 195.839 70.5875ZM208.95 70.6189C208.95 67.8273 207.162 66.2904 205.123 66.2904C203.116 66.2904 201.296 67.796 201.296 70.5875C201.296 73.3791 203.116 74.9474 205.123 74.9474C207.162 74.9474 208.95 73.4105 208.95 70.6189ZM235.476 61.8678V79.37H230.113V76.9862C229.046 78.4917 227.164 79.5582 224.812 79.5582C220.766 79.5582 218.037 76.7666 218.037 72.0931V61.8678H223.369V71.3717C223.369 73.7555 224.718 75.0729 226.725 75.0729C228.795 75.0729 230.113 73.7555 230.113 71.3717V61.8678H235.476ZM238.262 70.6189C238.262 65.0985 241.901 61.6169 247.045 61.6169C251.436 61.6169 254.541 64.0321 255.451 68.2037H249.742C249.303 66.9805 248.425 66.1963 246.951 66.1963C245.037 66.1963 243.72 67.7019 243.72 70.6189C243.72 73.5359 245.037 75.0415 246.951 75.0415C248.425 75.0415 249.272 74.3201 249.742 73.0341H255.451C254.541 77.0803 251.436 79.6209 247.045 79.6209C241.901 79.6209 238.262 76.1707 238.262 70.6189ZM259.167 73.285V66.3218H257.034V61.8678H259.167V57.6021H264.53V61.8678H268.043V66.3218H264.53V73.3477C264.53 74.3828 264.97 74.8219 266.161 74.8219H268.075V79.37H265.346C261.707 79.37 259.167 77.8331 259.167 73.285Z" fill="#040E1A"/>
+<path d="M152.194 88.7112C159.22 88.7112 163.737 93.1651 163.737 99.7206C163.737 106.245 159.22 110.73 152.194 110.73H143.945V88.7112H152.194ZM149.308 106.088H151.849C155.895 106.088 158.279 103.767 158.279 99.7206C158.279 95.6744 155.895 93.2906 151.849 93.2906H149.308V106.088ZM174.45 97.2741C172.693 97.2741 171.345 98.3405 171.031 100.285H177.743C177.743 98.3719 176.238 97.2741 174.45 97.2741ZM182.825 104.927C181.978 108.346 178.873 110.981 174.513 110.981C169.369 110.981 165.668 107.531 165.668 101.979C165.668 96.4272 169.306 92.9769 174.513 92.9769C179.625 92.9769 183.232 96.3645 183.232 101.697C183.232 102.199 183.201 102.732 183.138 103.265H171C171.188 105.555 172.599 106.621 174.325 106.621C175.83 106.621 176.677 105.868 177.116 104.927H182.825ZM184.4 93.2279H190.14L193.935 105.711L197.73 93.2279H203.439L197.228 110.73H190.61L184.4 93.2279Z" fill="#040E1A"/>
+<defs>
+<linearGradient id="paint0_linear_37_15" x1="-5.50314e-05" y1="110.25" x2="102.317" y2="110.25" gradientUnits="userSpaceOnUse">
+<stop stop-color="#1179EC"/>
+<stop offset="1" stop-color="#3A86FF"/>
+</linearGradient>
+<linearGradient id="paint1_linear_37_15" x1="0" y1="46.7507" x2="102.316" y2="46.7507" gradientUnits="userSpaceOnUse">
+<stop stop-color="#1179EC"/>
+<stop offset="1" stop-color="#3A86FF"/>
+</linearGradient>
+<clipPath id="clip0_37_15">
+<rect width="121" height="127" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+        </div>
+        <div class="inv-right">
+          <div class="title">INVOICE</div>
+          <div class="subtitle">Salary payment request</div>
+          <div class="inv-meta">
+            <div>No. <strong x-text="form.number"></strong></div>
+            <div>Date <strong x-text="formatDate(form.date)"></strong></div>
+            <div>Period <strong x-text="periodLabel()"></strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="parties">
+        <div>
+          <div class="eyebrow">From</div>
+          <div class="name" x-text="profile.name || '—'"></div>
+          <div class="detail" x-text="profile.role"></div>
+          <div class="detail" x-text="profile.email"></div>
+          <div class="detail" x-text="profile.address"></div>
+        </div>
+        <div>
+          <div class="eyebrow">Bill to</div>
+          <div class="name" x-text="profile.companyName || '—'"></div>
+          <div class="detail" x-text="profile.companyAttn"></div>
+          <div class="detail" x-text="profile.companyAddress"></div>
+        </div>
+      </div>
+
+      <table class="items">
+        <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>
+              <span x-text="form.description"></span>
+              <div style="color:var(--muted);font-size:12px" x-show="form.note" x-text="form.note"></div>
+            </td>
+            <td class="amount" x-text="money(form.amount)"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="total-row">
+        <span>Total due</span>
+        <span class="amt" x-text="money(form.amount)"></span>
+      </div>
+
+      <div class="pay-note" x-show="profile.payment">
+        <div class="eyebrow">Pay to</div>
+        <div class="detail" x-text="profile.payment"></div>
+      </div>
+
+      <div class="sig">
+        <div class="line" x-text="profile.name"></div>
+        <div>Thank you.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card no-print" x-show="tab==='history'" x-cloak>
+    <h2>Saved invoices</h2>
+    <template x-if="history.length === 0"><div class="empty">No invoices saved yet.</div></template>
+    <template x-for="inv in history" :key="inv.id">
+      <div class="hist-item">
+        <div>
+          <div class="no" x-text="inv.number"></div>
+          <div class="period" x-text="inv.periodLabel + ' · ' + inv.dateLabel"></div>
+        </div>
+        <div class="amt" x-text="inv.amountLabel"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" @click="loadInvoice(inv)">Open</button>
+          <button class="btn danger" @click="deleteInvoice(inv.id)">Delete</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script>
+function invoiceApp(){
+  const DB_NAME='salary-invoices', DB_VER=1;
+  let db=null;
+
+  function openDB(){
+    return new Promise((res,rej)=>{
+      const req=indexedDB.open(DB_NAME,DB_VER);
+      req.onupgradeneeded=e=>{
+        const d=e.target.result;
+        if(!d.objectStoreNames.contains('profile')) d.createObjectStore('profile');
+        if(!d.objectStoreNames.contains('invoices')) d.createObjectStore('invoices',{keyPath:'id',autoIncrement:true});
+      };
+      req.onsuccess=e=>res(e.target.result);
+      req.onerror=()=>rej(req.error);
+    });
+  }
+  const tx=(store,mode,fn)=>new Promise((res,rej)=>{
+    const t=db.transaction(store,mode), s=t.objectStore(store), out=fn(s);
+    t.oncomplete=()=>res(out&&out.result!==undefined?out.result:undefined);
+    t.onerror=()=>rej(t.error);
+  });
+
+  const today=()=>new Date().toISOString().slice(0,10);
+  const thisMonth=()=>new Date().toISOString().slice(0,7);
+  const monthName=m=>{
+    if(!m) return '';
+    const [y,mo]=m.split('-');
+    return new Date(y,mo-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+  };
+
+  return {
+    tab:'new',
+    savedFlash:false, invFlash:false,
+    profile:{name:'',role:'',email:'',address:'',payment:'',amount:0,currency:'USD',
+             companyName:'',companyAddress:'',companyAttn:''},
+    form:{half:new Date().getDate()<=15?'1':'2', month:thisMonth(), number:'', date:today(),
+          description:'', amount:0, note:''},
+    history:[],
+
+    async init(){
+      try{ db=await openDB(); }catch(e){ alert('IndexedDB unavailable in this context. Data will not persist.'); }
+      if(db){
+        const p=await tx('profile','readonly',s=>s.get('me')).catch(()=>null);
+        if(p) this.profile={...this.profile,...p};
+      }
+      if(!this.form.amount) this.form.amount=this.profile.amount||0;
+      this.syncDescription();
+      await this.suggestNumber();
+      if(!this.profile.name) this.tab='settings';
+    },
+
+    syncDescription(){
+      this.form.description=`Salary — ${this.periodLabel()}`;
+      if(!this.form.amount) this.form.amount=this.profile.amount||0;
+    },
+    periodLabel(){
+      const m=monthName(this.form.month);
+      return this.form.half==='1' ? `1–15 ${m}` : `16–${this.lastDay()} ${m}`;
+    },
+    lastDay(){
+      if(!this.form.month) return '';
+      const [y,mo]=this.form.month.split('-');
+      return new Date(y,mo,0).getDate();
+    },
+    money(v){
+      const cur=this.profile.currency||'USD';
+      try{ return new Intl.NumberFormat('en',{style:'currency',currency:cur}).format(v||0); }
+      catch{ return `${cur} ${(v||0).toFixed(2)}`; }
+    },
+    formatDate(d){ return d? new Date(d+'T00:00:00').toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'}):''; },
+
+    async suggestNumber(){
+      let count=0;
+      if(db){ count=await tx('invoices','readonly',s=>s.count()).catch(()=>0)||0; }
+      const ym=(this.form.month||thisMonth()).replace('-','');
+      this.form.number=`INV-${ym}-${String(count+1).padStart(3,'0')}`;
+    },
+
+    async saveProfile(){
+      this.profile.amount=Number(this.profile.amount)||0;
+      if(db) await tx('profile','readwrite',s=>s.put({...this.profile},'me'));
+      this.savedFlash=true; setTimeout(()=>this.savedFlash=false,1500);
+      if(!this.form.amount) this.form.amount=this.profile.amount;
+      this.syncDescription();
+    },
+
+    async saveInvoice(){
+      const rec={
+        number:this.form.number, date:this.form.date, half:this.form.half, month:this.form.month,
+        description:this.form.description, amount:Number(this.form.amount)||0, note:this.form.note,
+        periodLabel:this.periodLabel(), dateLabel:this.formatDate(this.form.date),
+        amountLabel:this.money(this.form.amount), savedAt:Date.now()
+      };
+      if(db) await tx('invoices','readwrite',s=>s.put(rec));
+      this.invFlash=true; setTimeout(()=>this.invFlash=false,1500);
+    },
+    async saveAndPrint(){ await this.saveInvoice(); this.tab='new'; setTimeout(()=>window.print(),100); },
+
+    async loadHistory(){
+      if(!db){ this.history=[]; return; }
+      this.history=await new Promise(res=>{
+        const out=[]; const s=db.transaction('invoices','readonly').objectStore('invoices');
+        s.openCursor(null,'prev').onsuccess=e=>{
+          const c=e.target.result;
+          if(c){ out.push(c.value); c.continue(); } else res(out);
+        };
+      });
+    },
+    loadInvoice(inv){
+      this.form={half:inv.half, month:inv.month, number:inv.number, date:inv.date,
+                 description:inv.description, amount:inv.amount, note:inv.note||''};
+      this.tab='new';
+    },
+    async deleteInvoice(id){
+      if(!confirm('Delete this invoice?')) return;
+      await tx('invoices','readwrite',s=>s.delete(id));
+      this.loadHistory();
+    }
+  };
+}
+</script>
+</body>
+</html>
