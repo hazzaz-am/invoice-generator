@@ -39,7 +39,7 @@
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.danger{color:var(--danger)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  .actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
   .saved-flash{font-size:12px;color:var(--accent);font-weight:600;margin-left:6px}
 
   /* invoice paper */
@@ -108,7 +108,7 @@
     <label>Email</label><input x-model="profile.email" placeholder="jane@example.com">
     <label>Address (optional)</label><textarea x-model="profile.address"></textarea>
     <label>Payment details (bank / account)</label>
-    <textarea x-model="profile.payment" placeholder="Bank: Example Bank&#10;Account: 0000-0000&#10;IBAN: ..."></textarea>
+    <textarea x-model="profile.payment" placeholder="Bank: Example Bank&#10;Account: 0000-0000&#10;IBAN: ..." rows="5"></textarea>
     <div class="row2">
       <div><label>Semi-monthly amount</label><input type="number" min="0" step="0.01" x-model.number="profile.amount"></div>
       <div><label>Currency</label><input x-model="profile.currency" placeholder="USD"></div>
