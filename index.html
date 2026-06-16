@@ -114,6 +114,9 @@
     <label>Company address</label><textarea x-model="profile.companyAddress"></textarea>
     <label>Attention to (optional)</label><input x-model="profile.companyAttn" placeholder="Finance / HR">
 
+    <h2 style="margin-top:24px">Invoice details</h2>
+    <label>Service description</label><input x-model="profile.serviceLabel" placeholder="Frontend Development support">
+
     <div class="actions">
       <button class="btn primary" @click="saveProfile()">Save details</button>
       <span class="saved-flash" x-show="savedFlash" x-transition.opacity>Saved ✓</span>
@@ -268,7 +271,7 @@ function invoiceApp(){
     tab:'new',
     savedFlash:false, invFlash:false,
     profile:{name:'',role:'',email:'',address:'',payment:'',amount:0,currency:'USD',
-             companyName:'',companyAddress:'',companyAttn:''},
+             companyName:'',companyAddress:'',companyAttn:'',serviceLabel:''},
     form:{half:new Date().getDate()<=15?'1':'2', month:thisMonth(), number:'', date:today(),
           description:'', amount:0, note:''},
     history:[],
@@ -290,10 +293,11 @@ function invoiceApp(){
       const [y,mo]=this.form.month.split('-');
       const mName=new Date(y,mo-1,1).toLocaleString('en',{month:'long'});
       const mYear=new Date(y,mo-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+      const svc=this.profile.serviceLabel||'Frontend Development support';
       if(this.form.half==='1'){
-        this.form.description=`Milestone 01\nFrontend Development support from 1 ${mName} to 15 ${mYear}`;
+        this.form.description=`Milestone 01\n${svc} from 1 ${mName} to 15 ${mYear}`;
       } else {
-        this.form.description=`Milestone 02\nFrontend Development support from 16 ${mName} to ${this.lastDay()} ${mYear}`;
+        this.form.description=`Milestone 02\n${svc} from 16 ${mName} to ${this.lastDay()} ${mYear}`;
       }
       if(!this.form.amount) this.form.amount=this.profile.amount||0;
     },
