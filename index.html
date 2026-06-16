@@ -60,7 +60,7 @@
   table.items th:last-child,table.items td:last-child{text-align:right}
   table.items td{padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
   table.items td.amount{font-family:var(--mono)}
-  .total-row{display:flex;justify-content:flex-end;gap:40px;padding:16px 0;font-weight:700}
+  .total-row{display:flex;justify-content:flex-end;gap:40px;padding:16px 0;font-weight:700;align-items:center}
   .total-row .amt{font-family:var(--mono);font-size:18px;background:var(--accent-soft);color:var(--accent);padding:4px 12px;border-radius:6px}
   .pay-note{margin-top:20px;padding:14px;background:#f7f8f9;border-radius:8px;font-size:12px}
   .pay-note .eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
@@ -88,11 +88,6 @@
 </head>
 <body>
 <div class="app" x-data="invoiceApp()" x-init="init()">
-
-  <header class="top no-print">
-    <h1>Salary Invoice Generator</h1>
-    <span class="sub">internal · software team</span>
-  </header>
 
   <div class="tabs no-print">
     <button :class="{active: tab==='new'}" @click="tab='new'">New invoice</button>
@@ -143,7 +138,7 @@
       <label>Invoice date</label>
       <input type="date" x-model="form.date">
       <label>Description</label>
-      <input x-model="form.description">
+      <textarea x-model="form.description" rows="3"></textarea>
       <label>Amount</label>
       <input type="number" min="0" step="0.01" x-model.number="form.amount">
       <label>Note (optional)</label>
@@ -161,12 +156,12 @@
       <div class="inv-head">
         <div>
           <div class="title">INVOICE</div>
-          <div class="subtitle">Salary payment request</div>
+          <div class="subtitle">Payment request</div>
         </div>
         <div class="inv-right">
           <div class="inv-meta">
             <div>No. <strong x-text="form.number"></strong></div>
-            <div>Date <strong x-text="formatDate(form.date)"></strong></div>
+            <div>Issued On <strong x-text="formatDate(form.date)"></strong></div>
             <div>Period <strong x-text="periodLabel()"></strong></div>
           </div>
         </div>
@@ -193,7 +188,7 @@
         <tbody>
           <tr>
             <td>
-              <span x-text="form.description"></span>
+              <div style="white-space:pre-line" x-text="form.description"></div>
               <div style="color:var(--muted);font-size:12px" x-show="form.note" x-text="form.note"></div>
             </td>
             <td class="amount" x-text="money(form.amount)"></td>
@@ -291,7 +286,15 @@ function invoiceApp(){
     },
 
     syncDescription(){
-      this.form.description=`Salary — ${this.periodLabel()}`;
+      if(!this.form.month){ if(!this.form.amount) this.form.amount=this.profile.amount||0; return; }
+      const [y,mo]=this.form.month.split('-');
+      const mName=new Date(y,mo-1,1).toLocaleString('en',{month:'long'});
+      const mYear=new Date(y,mo-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+      if(this.form.half==='1'){
+        this.form.description=`Milestone 01\nFrontend Development support from 1 ${mName} to 15 ${mYear}`;
+      } else {
+        this.form.description=`Milestone 02\nFrontend Development support from 16 ${mName} to ${this.lastDay()} ${mYear}`;
+      }
       if(!this.form.amount) this.form.amount=this.profile.amount||0;
     },
     periodLabel(){
