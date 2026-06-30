@@ -141,10 +141,20 @@
       <input x-model="form.number">
       <label>Invoice date</label>
       <input type="date" x-model="form.date">
-      <label>Description</label>
-      <textarea x-model="form.description" rows="3"></textarea>
-      <label>Amount</label>
-      <input type="number" min="0" step="0.01" x-model.number="form.amount">
+      <label>Line items</label>
+      <template x-for="(item, idx) in form.items" :key="idx">
+        <div style="border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em" x-text="'Item '+(idx+1)"></span>
+            <button x-show="form.items.length > 1" class="btn danger" style="padding:2px 8px;font-size:11px" @click="form.items.splice(idx,1)">Remove</button>
+          </div>
+          <label style="margin-top:0">Description</label>
+          <textarea x-model="form.items[idx].description" rows="2"></textarea>
+          <label>Amount</label>
+          <input type="number" min="0" step="0.01" x-model.number="form.items[idx].amount">
+        </div>
+      </template>
+      <button class="btn" style="width:100%;margin-bottom:4px" @click="form.items.push({description:'',amount:0})">+ Add line item</button>
       <label>Note (optional)</label>
       <input x-model="form.note" placeholder="e.g. includes on-call allowance">
       <div class="actions">
@@ -190,19 +200,21 @@
       <table class="items">
         <thead><tr><th>Description</th><th>Amount</th></tr></thead>
         <tbody>
-          <tr>
-            <td>
-              <div style="white-space:pre-line" x-text="form.description"></div>
-              <div style="color:var(--muted);font-size:12px" x-show="form.note" x-text="form.note"></div>
-            </td>
-            <td class="amount" x-text="money(form.amount)"></td>
+          <template x-for="(item, idx) in form.items" :key="idx">
+            <tr>
+              <td><div style="white-space:pre-line" x-text="item.description"></div></td>
+              <td class="amount" x-text="money(item.amount)"></td>
+            </tr>
+          </template>
+          <tr x-show="form.note">
+            <td colspan="2" style="color:var(--muted);font-size:12px;padding:8px 0" x-text="form.note"></td>
           </tr>
         </tbody>
       </table>
 
       <div class="total-row">
         <span>Total due</span>
-        <span class="amt" x-text="money(form.amount)"></span>
+        <span class="amt" x-text="money(totalAmount())"></span>
       </div>
 
       <div class="pay-note" x-show="profile.payment">
@@ -274,7 +286,7 @@ function invoiceApp(){
     profile:{name:'',role:'',email:'',address:'',payment:'',amount:0,currency:'USD',
              companyName:'',companyAddress:'',companyAttn:'',serviceLabel:''},
     form:{half:new Date().getDate()<=15?'1':'2', month:thisMonth(), number:'', date:today(),
-          description:'', amount:0, note:''},
+          items:[{description:'',amount:0}], note:''},
     history:[],
 
     async init(){
@@ -283,7 +295,7 @@ function invoiceApp(){
         const p=await tx('profile','readonly',s=>s.get('me')).catch(()=>null);
         if(p) this.profile={...this.profile,...p};
       }
-      if(!this.form.amount) this.form.amount=this.profile.amount||0;
+      if(!this.form.items[0].amount) this.form.items[0].amount=this.profile.amount||0;
       this.syncDescription();
       await this.suggestNumber();
       if(!this.profile.name) this.tab='settings';
@@ -291,18 +303,19 @@ function invoiceApp(){
 
     ordinal(n){ const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); },
     syncDescription(){
-      if(!this.form.month){ if(!this.form.amount) this.form.amount=this.profile.amount||0; return; }
+      if(!this.form.month){ return; }
       const [y,mo]=this.form.month.split('-');
       const mName=new Date(y,mo-1,1).toLocaleString('en',{month:'long'});
       const mYear=new Date(y,mo-1,1).toLocaleString('en',{month:'long',year:'numeric'});
       const svc=this.profile.serviceLabel||'Frontend Development support';
       if(this.form.half==='1'){
-        this.form.description=`Milestone 01\n${svc} from ${this.ordinal(1)} ${mName} to ${this.ordinal(15)} ${mYear}`;
+        this.form.items[0].description=`Milestone 01\n${svc} from ${this.ordinal(1)} ${mName} to ${this.ordinal(15)} ${mYear}`;
       } else {
-        this.form.description=`Milestone 02\n${svc} from ${this.ordinal(16)} ${mName} to ${this.ordinal(this.lastDay())} ${mYear}`;
+        this.form.items[0].description=`Milestone 02\n${svc} from ${this.ordinal(16)} ${mName} to ${this.ordinal(this.lastDay())} ${mYear}`;
       }
-      if(!this.form.amount) this.form.amount=this.profile.amount||0;
+      if(!this.form.items[0].amount) this.form.items[0].amount=this.profile.amount||0;
     },
+    totalAmount(){ return this.form.items.reduce((s,i)=>s+(Number(i.amount)||0),0); },
     periodLabel(){
       const m=monthName(this.form.month);
       return this.form.half==='1' ? `1–15 ${m}` : `16–${this.lastDay()} ${m}`;
@@ -330,16 +343,17 @@ function invoiceApp(){
       this.profile.amount=Number(this.profile.amount)||0;
       if(db) await tx('profile','readwrite',s=>s.put({...this.profile},'me'));
       this.savedFlash=true; setTimeout(()=>this.savedFlash=false,1500);
-      if(!this.form.amount) this.form.amount=this.profile.amount;
+      if(!this.form.items[0].amount) this.form.items[0].amount=this.profile.amount;
       this.syncDescription();
     },
 
     async saveInvoice(){
+      const total=this.totalAmount();
       const rec={
         number:this.form.number, date:this.form.date, half:this.form.half, month:this.form.month,
-        description:this.form.description, amount:Number(this.form.amount)||0, note:this.form.note,
+        items:this.form.items.map(i=>({...i})), note:this.form.note,
         periodLabel:this.periodLabel(), dateLabel:this.formatDate(this.form.date),
-        amountLabel:this.money(this.form.amount), savedAt:Date.now()
+        amountLabel:this.money(total), savedAt:Date.now()
       };
       if(db) await tx('invoices','readwrite',s=>s.put(rec));
       this.invFlash=true; setTimeout(()=>this.invFlash=false,1500);
@@ -358,7 +372,8 @@ function invoiceApp(){
     },
     loadInvoice(inv){
       this.form={half:inv.half, month:inv.month, number:inv.number, date:inv.date,
-                 description:inv.description, amount:inv.amount, note:inv.note||''};
+                 items:inv.items||[{description:inv.description||'',amount:inv.amount||0}],
+                 note:inv.note||''};
       this.tab='new';
     },
     async deleteInvoice(id){
