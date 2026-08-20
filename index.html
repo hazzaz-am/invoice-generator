@@ -117,6 +117,12 @@
 
     <h2 style="margin-top:24px">Invoice details</h2>
     <label>Service description</label><input x-model="profile.serviceLabel" placeholder="Frontend Development support">
+    <label>Signature</label>
+    <input type="file" accept="image/*" @change="uploadSignature($event)">
+    <div x-show="profile.signature" style="margin-top:8px;display:flex;align-items:center;gap:10px">
+      <img :src="profile.signature" style="max-height:50px;max-width:200px;object-fit:contain">
+      <button class="btn danger" style="padding:4px 10px;font-size:12px" @click="profile.signature=''">Remove</button>
+    </div>
 
     <div class="actions">
       <button class="btn primary" @click="saveProfile()">Save details</button>
@@ -223,7 +229,10 @@
       </div>
 
       <div class="sig">
-        <div class="line" x-text="profile.name"></div>
+        <div>
+          <img x-show="profile.signature" :src="profile.signature" style="display:block;max-height:50px;max-width:200px;object-fit:contain;margin-bottom:6px">
+          <div class="line" x-text="profile.name"></div>
+        </div>
         <div>Thank you.</div>
       </div>
     </div>
@@ -284,7 +293,7 @@ function invoiceApp(){
     tab:'new',
     savedFlash:false, invFlash:false,
     profile:{name:'',role:'',email:'',address:'',payment:'',amount:0,currency:'USD',
-             companyName:'',companyAddress:'',companyAttn:'',serviceLabel:''},
+             companyName:'',companyAddress:'',companyAttn:'',serviceLabel:'',signature:''},
     form:{half:new Date().getDate()<=15?'1':'2', month:thisMonth(), number:'', date:today(),
           items:[{description:'',amount:0}], note:''},
     history:[],
@@ -337,6 +346,14 @@ function invoiceApp(){
       if(db){ count=await tx('invoices','readonly',s=>s.count()).catch(()=>0)||0; }
       const ym=(this.form.month||thisMonth()).replace('-','');
       this.form.number=`INV-${ym}-${String(count+1).padStart(3,'0')}`;
+    },
+
+    uploadSignature(e){
+      const file=e.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=()=>{ this.profile.signature=reader.result; };
+      reader.readAsDataURL(file);
     },
 
     async saveProfile(){
